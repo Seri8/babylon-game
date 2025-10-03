@@ -98,7 +98,7 @@
       // Camera animation along path parameter u in [0,1]
       let u = 0.0;
       let playing = true;
-      const speed = 0.00025; // slower speed
+      const speed = 0.00005; // much slower speed
 
       function samplePath(t){
         t = Math.max(0, Math.min(1, t));
@@ -121,7 +121,7 @@
           if (u > 1) u = 0; // loop
         }
         const pos = samplePath(u);
-        const ahead = samplePath(Math.min(u + 0.002, 1)); // smaller look-ahead for less jitter
+        const ahead = samplePath(Math.min(u + 0.001, 1)); // smaller look-ahead for smoother feel
         camera.position.copyFrom(pos);
         camera.setTarget(ahead);
       });
