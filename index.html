@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Babylon.js Realistic Subway Tunnel</title>
+  <title>Babylon.js Subway Tunnel</title>
   <style>
     html, body { width:100%; height:100%; margin:0; overflow:hidden; background:#000; }
     #renderCanvas { width:100%; height:100%; display:block; }
@@ -12,8 +12,8 @@
 <body>
   <canvas id="renderCanvas"></canvas>
 
+  <!-- Babylon.js -->
   <script src="https://cdn.babylonjs.com/babylon.js"></script>
-  <script src="https://cdn.babylonjs.com/materialsLibrary/babylonjs.materials.min.js"></script>
   <script>
     const canvas = document.getElementById("renderCanvas");
     const engine = new BABYLON.Engine(canvas, true);
@@ -22,9 +22,10 @@
       const scene = new BABYLON.Scene(engine);
       scene.clearColor = new BABYLON.Color4(0.05,0.05,0.05,1);
 
-      const camera = new BABYLON.FreeCamera("cam", new BABYLON.Vector3(0,1,-10), scene);
+      // Camera
+      const camera = new BABYLON.FreeCamera("cam", new BABYLON.Vector3(0,1,-5), scene);
       camera.attachControl(canvas, true);
-      camera.speed = 0.2;
+      camera.speed = 0.3;
 
       // Ambient light
       const ambient = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0,1,0), scene);
@@ -32,49 +33,39 @@
 
       // Tunnel path
       const path = [];
-      for (let i=0;i<400;i++) {
+      for (let i=0;i<150;i++) {
         path.push(new BABYLON.Vector3(0,0,i*2));
       }
+
+      // Tube mesh (the tunnel)
       const tunnel = BABYLON.MeshBuilder.CreateTube("tunnel", {
         path: path,
         radius: 3,
-        tessellation: 64,
+        tessellation: 32,
         sideOrientation: BABYLON.Mesh.BACKSIDE
       }, scene);
 
-      // Tunnel material (concrete)
-      const mat = new BABYLON.PBRMaterial("mat", scene);
-      mat.albedoTexture = new BABYLON.Texture("https://assets.babylonjs.com/environments/concrete.jpg", scene);
-      mat.bumpTexture = new BABYLON.Texture("https://assets.babylonjs.com/environments/concreteNormal.jpg", scene);
-      mat.roughness = 1.0;
-      mat.metallic = 0.0;
-      tunnel.material = mat;
+      // Tunnel material (plain concrete-like gray)
+      const tunnelMat = new BABYLON.StandardMaterial("tunnelMat", scene);
+      tunnelMat.diffuseColor = new BABYLON.Color3(0.4,0.4,0.4);
+      tunnelMat.specularColor = new BABYLON.Color3(0.1,0.1,0.1);
+      tunnel.material = tunnelMat;
 
       // Ceiling lights every 20 units
-      for (let i=0; i<400; i+=20) {
+      for (let i=0; i<150; i+=20) {
         const lamp = new BABYLON.PointLight("lamp"+i, new BABYLON.Vector3(0,2,i*2), scene);
         lamp.diffuse = new BABYLON.Color3(1,1,0.9);
-        lamp.intensity = 2;
-        const bulb = BABYLON.MeshBuilder.CreateSphere("bulb"+i, {diameter:0.3}, scene);
+        lamp.intensity = 2.0;
+
+        // Bulb mesh
+        const bulb = BABYLON.MeshBuilder.CreateSphere("bulb"+i, {diameter:0.2}, scene);
         bulb.position = new BABYLON.Vector3(0,2,i*2);
         const bulbMat = new BABYLON.StandardMaterial("bulbMat", scene);
         bulbMat.emissiveColor = new BABYLON.Color3(1,1,0.8);
         bulb.material = bulbMat;
       }
 
-      // Floor plane (like rails)
-      const floor = BABYLON.MeshBuilder.CreatePlane("floor", {width:6, height:800}, scene);
-      floor.rotation.x = Math.PI/2;
-      floor.position.z = 400;
-      floor.position.y = -3;
-      const floorMat = new BABYLON.PBRMaterial("floorMat", scene);
-      floorMat.albedoTexture = new BABYLON.Texture("https://assets.babylonjs.com/environments/metal.jpg", scene);
-      floorMat.bumpTexture = new BABYLON.Texture("https://assets.babylonjs.com/environments/metalNormal.jpg", scene);
-      floorMat.roughness = 0.8;
-      floorMat.metallic = 0.5;
-      floor.material = floorMat;
-
-      // Subtle fog for depth
+      // Fog for depth
       scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
       scene.fogDensity = 0.01;
       scene.fogColor = new BABYLON.Color3(0.1,0.1,0.1);
