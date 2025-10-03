@@ -1,24 +1,167 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Babylon.js Simple Game</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Babylon.js Tunnel — GitHub Pages-ready</title>
   <style>
-    html, body {
-      width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
-    }
-    #renderCanvas {
-      width: 100%; height: 100%; touch-action: none;
-    }
+    html,body { height:100%; margin:0; background:#000 }
+    #renderCanvas { width:100%; height:100%; display:block }
+    .ui { position:fixed; left:12px; top:12px; color:#ddd; font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial; z-index:10 }
+    .ui a { color:#9cf }
   </style>
 </head>
 <body>
+  <div class="ui">Use mouse/touch to look. Click to lock pointer. <br>Press <strong>Space</strong> to pause/resume camera animation.</div>
   <canvas id="renderCanvas"></canvas>
 
-  <!-- Babylon.js CDN -->
   <script src="https://cdn.babylonjs.com/babylon.js"></script>
-  <script src="https://cdn.babylonjs.com/gui/babylon.gui.min.js"></script>
-  <script src="script.js"></script>
+  <script>
+  (function(){
+    const canvas = document.getElementById('renderCanvas');
+    const engine = new BABYLON.Engine(canvas, true, {preserveDrawingBuffer:true, stencil:true});
+
+    const createScene = function(){
+      const scene = new BABYLON.Scene(engine);
+      scene.clearColor = new BABYLON.Color4(0,0,0,1);
+
+      // Camera placed inside tunnel. FreeCamera so user can look around.
+      const camera = new BABYLON.FreeCamera('cam', new BABYLON.Vector3(0,0,0), scene);
+      camera.attachControl(canvas, true);
+      camera.minZ = 0.1;
+
+      // Light to subtly light contact points; interior will use emissive texture for glow.
+      const light = new BABYLON.HemisphericLight('hlight', new BABYLON.Vector3(0,1,0), scene);
+      light.intensity = 0.6;
+
+      // Build a winding path for the tunnel
+      const points = [];
+      const segments = 600;
+      for (let i=0;i<segments;i++){
+        const t = i/(segments-1);
+        const z = i * 0.6;
+        const x = Math.sin(i * 0.12) * 2.0 * (1 + 0.3*Math.sin(i*0.05));
+        const y = Math.cos(i * 0.08) * 1.0 * (1 + 0.2*Math.cos(i*0.07));
+        points.push(new BABYLON.Vector3(x,y,z));
+      }
+
+      // Create tube mesh (the tunnel). Use double-sided so interior is visible.
+      const tube = BABYLON.MeshBuilder.CreateTube('tunnel', {path:points, radius:3.2, tessellation:64, sideOrientation:BABYLON.Mesh.DOUBLESIDE, updatable:false}, scene);
+
+      // Create a dynamic texture with repeating stripes to simulate tunnel walls
+      const dtSize = 1024;
+      const dt = new BABYLON.DynamicTexture('dyn', {width:dtSize, height:dtSize}, scene, false);
+      const ctx = dt.getContext();
+
+      // draw radial-ish stripes
+      ctx.fillStyle = '#111';
+      ctx.fillRect(0,0,dtSize,dtSize);
+      for (let i=0;i<40;i++){
+        const w = Math.floor((i%4===0) ? dtSize*0.18 : dtSize*0.06);
+        ctx.fillStyle = i%2 ? '#222' : '#2a2a2a';
+        ctx.fillRect(i*(dtSize/40),0,w,dtSize);
+      }
+      // add subtle noise
+      for (let k=0;k<8000;k++){
+        const x = Math.random()*dtSize, y = Math.random()*dtSize, a = Math.random()*20;
+        ctx.fillStyle = `rgba(0,0,0,${a/255})`;
+        ctx.fillRect(x,y,1,1);
+      }
+      dt.update();
+
+      const mat = new BABYLON.StandardMaterial('m', scene);
+      mat.emissiveTexture = dt; // emissive so it looks lit from inside
+      mat.diffuseColor = new BABYLON.Color3(0.08,0.08,0.08);
+      mat.specularColor = new BABYLON.Color3(0.02,0.02,0.02);
+      mat.emissiveTexture.uScale = 40; // repeat texture along U (around)
+      mat.emissiveTexture.vScale = 200; // repeat along V (length)
+      mat.backFaceCulling = false;
+
+      tube.material = mat;
+
+      // Add subtle fog for depth
+      scene.fogMode = BABYLON.Scene.FOGMODE_EXP;
+      scene.fogDensity = 0.0025;
+      scene.fogColor = scene.clearColor;
+
+      // Create small glowing rings along the path for visual interest
+      const ringMat = new BABYLON.StandardMaterial('ringMat', scene);
+      ringMat.emissiveColor = new BABYLON.Color3(0.2,0.5,1.0);
+      ringMat.specularColor = BABYLON.Color3.Black();
+
+      const ring = BABYLON.MeshBuilder.CreateTorus('ring', {diameter:5.8, thickness:0.1, tessellation:48}, scene);
+      ring.material = ringMat;
+      ring.isPickable = false;
+
+      // instantiate rings along the path
+      for (let i=10;i<segments-40;i+=40){
+        const inst = ring.createInstance('r'+i);
+        inst.position = points[i].clone();
+        // orient ring to face cross-section
+        const next = points[Math.min(i+1, points.length-1)];
+        inst.lookAt(next);
+      }
+      ring.setEnabled(false);
+
+      // Camera animation along path parameter u in [0,1]
+      let u = 0.0;
+      let playing = true;
+      const speed = 0.0009; // tweak to change forward speed
+
+      // helper: sample path with linear interpolation
+      function samplePath(t){
+        t = Math.max(0, Math.min(1, t));
+        const f = t * (points.length - 1);
+        const i = Math.floor(f);
+        const frac = f - i;
+        if (i >= points.length-1) return points[points.length-1].clone();
+        const a = points[i];
+        const b = points[i+1];
+        return new BABYLON.Vector3(
+          BABYLON.Scalar.Lerp(a.x,b.x,frac),
+          BABYLON.Scalar.Lerp(a.y,b.y,frac),
+          BABYLON.Scalar.Lerp(a.z,b.z,frac)
+        );
+      }
+
+      // smooth look-ahead target
+      scene.registerBeforeRender(()=>{
+        if (playing){
+          u += speed * engine.getDeltaTime();
+          if (u > 1) u = 0; // loop
+        }
+        const pos = samplePath(u);
+        const ahead = samplePath(Math.min(u + 0.004, 1));
+        camera.position.copyFrom(pos);
+        camera.setTarget(ahead);
+      });
+
+      // Space toggles play/pause
+      window.addEventListener('keydown', (e)=>{
+        if (e.code === 'Space'){
+          playing = !playing;
+          e.preventDefault();
+        }
+      });
+
+      // pointer lock on click for immersive look-around
+      canvas.addEventListener('click', ()=>{
+        if (document.pointerLockElement !== canvas) canvas.requestPointerLock?.();
+      });
+
+      return scene;
+    };
+
+    const scene = createScene();
+
+    engine.runRenderLoop(()=>{
+      scene.render();
+    });
+
+    window.addEventListener('resize', ()=>{
+      engine.resize();
+    });
+  })();
+  </script>
 </body>
 </html>
