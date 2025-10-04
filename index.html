@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Cinematic Subway Tunnel</title>
+  <title>Cinematic Subway Tunnel (No Materials)</title>
   <style>
     html, body { width:100%; height:100%; margin:0; overflow:hidden; background:#000; }
     #renderCanvas { width:100%; height:100%; display:block; }
@@ -29,23 +29,22 @@
       const camera = new BABYLON.FreeCamera("cam", new BABYLON.Vector3(0,1.5,0), scene);
       camera.attachControl(canvas, true);
       camera.fov = 0.8;
-      camera.speed = 0.0;
 
       // Global light
       const ambient = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0,1,0), scene);
-      ambient.intensity = 0.15;
+      ambient.intensity = 0.2;
 
       // Tunnel path (meandering)
       const path = [];
       const tunnelLength = 250;
       for (let i=0; i<tunnelLength; i++) {
-        const x = Math.sin(i*0.1) * 2;   // horizontal curve
-        const y = Math.cos(i*0.05) * 0.5; // vertical undulation
+        const x = Math.sin(i*0.1) * 2;
+        const y = Math.cos(i*0.05) * 0.5;
         const z = i * 2;
         path.push(new BABYLON.Vector3(x,y,z));
       }
 
-      // Tunnel
+      // Tunnel geometry
       const tunnel = BABYLON.MeshBuilder.CreateTube("tunnel", {
         path: path,
         radius: 3,
@@ -53,16 +52,10 @@
         sideOrientation: BABYLON.Mesh.BACKSIDE
       }, scene);
 
-      // Tunnel material
-      const tunnelMat = new BABYLON.PBRMaterial("tunnelMat", scene);
-      tunnelMat.albedoTexture = new BABYLON.Texture("assets/concrete.jpg", scene);
-      tunnelMat.albedoTexture.uScale = 10;
-      tunnelMat.albedoTexture.vScale = 50;
-      tunnelMat.bumpTexture = new BABYLON.Texture("assets/concreteNormal.jpg", scene);
-      tunnelMat.bumpTexture.uScale = 10;
-      tunnelMat.bumpTexture.vScale = 50;
-      tunnelMat.metallic = 0;
-      tunnelMat.roughness = 1;
+      // Simple gray material (instead of PBR with textures)
+      const tunnelMat = new BABYLON.StandardMaterial("tunnelMat", scene);
+      tunnelMat.diffuseColor = new BABYLON.Color3(0.3,0.3,0.3);
+      tunnelMat.specularColor = new BABYLON.Color3(0,0,0);
       tunnel.material = tunnelMat;
 
       // Lights
@@ -74,104 +67,4 @@
         lamp.intensity = 2;
         lights.push(lamp);
 
-        const bulb = BABYLON.MeshBuilder.CreateSphere("bulb"+i,{diameter:0.25},scene);
-        bulb.position = new BABYLON.Vector3(lampPos.x, 2.2, lampPos.z);
-        const bulbMat = new BABYLON.StandardMaterial("bulbMat",scene);
-        bulbMat.emissiveColor = new BABYLON.Color3(1,0.95,0.8);
-        bulb.material = bulbMat;
-      }
-
-      // Rails
-      const railMat = new BABYLON.PBRMaterial("railMat", scene);
-      railMat.albedoTexture = new BABYLON.Texture("assets/metal.jpg", scene);
-      railMat.albedoTexture.uScale = 4;
-      railMat.albedoTexture.vScale = 50;
-      railMat.bumpTexture = new BABYLON.Texture("assets/metalNormal.jpg", scene);
-      railMat.bumpTexture.uScale = 4;
-      railMat.bumpTexture.vScale = 50;
-      railMat.metallic = 1;
-      railMat.roughness = 0.25;
-
-      const railLeft = BABYLON.MeshBuilder.CreateBox("railL",{width:0.1,height:0.05,depth:tunnelLength*2},scene);
-      railLeft.position = new BABYLON.Vector3(-0.7,-2.9,tunnelLength);
-      railLeft.material = railMat;
-
-      const railRight = railLeft.clone("railR");
-      railRight.position.x = 0.7;
-
-      // Pipes
-      const pipeMat = new BABYLON.PBRMaterial("pipeMat", scene);
-      pipeMat.albedoTexture = new BABYLON.Texture("assets/metal.jpg", scene);
-      pipeMat.bumpTexture = new BABYLON.Texture("assets/metalNormal.jpg", scene);
-      pipeMat.metallic = 1;
-      pipeMat.roughness = 0.3;
-
-      for (let i=0; i<tunnelLength; i+=20) {
-        const pipePos = path[i];
-        const pipe = BABYLON.MeshBuilder.CreateCylinder("pipe"+i,{diameter:0.2,height:2},scene);
-        pipe.rotation.z = Math.PI/2;
-        pipe.position = new BABYLON.Vector3(pipePos.x-2.5, 0.5, pipePos.z);
-        pipe.material = pipeMat;
-      }
-
-      // Fog
-      scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
-      scene.fogDensity = 0.01;
-      scene.fogColor = new BABYLON.Color3(0.05,0.05,0.05);
-
-      // Dust particles
-      const particleSystem = new BABYLON.ParticleSystem("dust", 2000, scene);
-      particleSystem.particleTexture = new BABYLON.Texture("assets/flare.png",scene);
-      particleSystem.emitter = new BABYLON.Vector3(0,1,0);
-      particleSystem.minEmitBox = new BABYLON.Vector3(-3,0,0);
-      particleSystem.maxEmitBox = new BABYLON.Vector3(3,2,tunnelLength*2);
-      particleSystem.color1 = new BABYLON.Color4(1,1,1,0.05);
-      particleSystem.color2 = new BABYLON.Color4(1,1,1,0.05);
-      particleSystem.minSize = 0.01;
-      particleSystem.maxSize = 0.04;
-      particleSystem.minLifeTime = 2;
-      particleSystem.maxLifeTime = 5;
-      particleSystem.emitRate = 400;
-      particleSystem.blendMode = BABYLON.ParticleSystem.BLENDMODE_STANDARD;
-      particleSystem.direction1 = new BABYLON.Vector3(0,0,1);
-      particleSystem.direction2 = new BABYLON.Vector3(0,0,1);
-      particleSystem.gravity = new BABYLON.Vector3(0,0,0);
-      particleSystem.start();
-
-      // Post-processing
-      const pipeline = new BABYLON.DefaultRenderingPipeline("default", true, scene, [camera]);
-      pipeline.bloomEnabled = true;
-      pipeline.bloomThreshold = 0.8;
-      pipeline.bloomIntensity = 0.6;
-      pipeline.imageProcessing.toneMappingEnabled = true;
-      pipeline.imageProcessing.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_FILMIC;
-      pipeline.imageProcessing.contrast = 1.3;
-      pipeline.imageProcessing.exposure = 1.2;
-
-      // Camera animation
-      let u=0;
-      scene.registerBeforeRender(()=>{
-        u+=0.15; // faster speed
-        if(u>tunnelLength*2) u=0;
-
-        // Follow the path smoothly
-        const idx = Math.floor(u/2) % path.length;
-        const pos = path[idx];
-        camera.position.x = pos.x;
-        camera.position.y = 1.5 + Math.sin(u*0.1)*0.05; // bobbing
-        camera.position.z = pos.z;
-
-        lights.forEach(lamp=>{
-          lamp.intensity = 1.8 + Math.random()*0.3; // flicker
-        });
-      });
-
-      return scene;
-    };
-
-    const scene = createScene();
-    engine.runRenderLoop(()=>scene.render());
-    window.addEventListener("resize",()=>engine.resize());
-  </script>
-</body>
-</html>
+        const bulb = BABYLON.MeshBuilder.CreateSphere("bulb"+i,{diamete
