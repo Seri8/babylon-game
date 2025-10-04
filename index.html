@@ -28,21 +28,24 @@
       // Camera
       const camera = new BABYLON.FreeCamera("cam", new BABYLON.Vector3(0,1.5,0), scene);
       camera.attachControl(canvas, true);
-      camera.fov = 0.8; // narrow cinematic FOV
+      camera.fov = 0.8;
       camera.speed = 0.0;
 
       // Global light
       const ambient = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0,1,0), scene);
       ambient.intensity = 0.15;
 
-      // Tunnel path
+      // Tunnel path (meandering)
       const path = [];
       const tunnelLength = 250;
       for (let i=0; i<tunnelLength; i++) {
-        path.push(new BABYLON.Vector3(0,0,i*2));
+        const x = Math.sin(i*0.1) * 2;   // horizontal curve
+        const y = Math.cos(i*0.05) * 0.5; // vertical undulation
+        const z = i * 2;
+        path.push(new BABYLON.Vector3(x,y,z));
       }
 
-      // Tunnel geometry
+      // Tunnel
       const tunnel = BABYLON.MeshBuilder.CreateTube("tunnel", {
         path: path,
         radius: 3,
@@ -50,7 +53,7 @@
         sideOrientation: BABYLON.Mesh.BACKSIDE
       }, scene);
 
-      // Tunnel material (grimy concrete)
+      // Tunnel material
       const tunnelMat = new BABYLON.PBRMaterial("tunnelMat", scene);
       tunnelMat.albedoTexture = new BABYLON.Texture("assets/concrete.jpg", scene);
       tunnelMat.albedoTexture.uScale = 10;
@@ -65,14 +68,14 @@
       // Lights
       const lights = [];
       for (let i=0; i<tunnelLength; i+=12) {
-        const lamp = new BABYLON.PointLight("lamp"+i,new BABYLON.Vector3(0,2.2,i*2),scene);
+        const lampPos = path[i];
+        const lamp = new BABYLON.PointLight("lamp"+i, new BABYLON.Vector3(lampPos.x, 2.2, lampPos.z), scene);
         lamp.diffuse = new BABYLON.Color3(1,0.95,0.85);
         lamp.intensity = 2;
         lights.push(lamp);
 
-        // Lamp mesh glow
         const bulb = BABYLON.MeshBuilder.CreateSphere("bulb"+i,{diameter:0.25},scene);
-        bulb.position = new BABYLON.Vector3(0,2.2,i*2);
+        bulb.position = new BABYLON.Vector3(lampPos.x, 2.2, lampPos.z);
         const bulbMat = new BABYLON.StandardMaterial("bulbMat",scene);
         bulbMat.emissiveColor = new BABYLON.Color3(1,0.95,0.8);
         bulb.material = bulbMat;
@@ -104,9 +107,10 @@
       pipeMat.roughness = 0.3;
 
       for (let i=0; i<tunnelLength; i+=20) {
+        const pipePos = path[i];
         const pipe = BABYLON.MeshBuilder.CreateCylinder("pipe"+i,{diameter:0.2,height:2},scene);
         pipe.rotation.z = Math.PI/2;
-        pipe.position = new BABYLON.Vector3(-2.5,0.5,i*2);
+        pipe.position = new BABYLON.Vector3(pipePos.x-2.5, 0.5, pipePos.z);
         pipe.material = pipeMat;
       }
 
@@ -144,13 +148,19 @@
       pipeline.imageProcessing.contrast = 1.3;
       pipeline.imageProcessing.exposure = 1.2;
 
-      // Camera animation (forward + bobbing)
+      // Camera animation
       let u=0;
       scene.registerBeforeRender(()=>{
-        u+=0.05;
+        u+=0.15; // faster speed
         if(u>tunnelLength*2) u=0;
-        camera.position.z = u;
-        camera.position.y = 1.5 + Math.sin(u*0.05)*0.05; // bobbing
+
+        // Follow the path smoothly
+        const idx = Math.floor(u/2) % path.length;
+        const pos = path[idx];
+        camera.position.x = pos.x;
+        camera.position.y = 1.5 + Math.sin(u*0.1)*0.05; // bobbing
+        camera.position.z = pos.z;
+
         lights.forEach(lamp=>{
           lamp.intensity = 1.8 + Math.random()*0.3; // flicker
         });
