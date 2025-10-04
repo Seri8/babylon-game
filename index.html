@@ -48,10 +48,14 @@
         sideOrientation: BABYLON.Mesh.BACKSIDE
       }, scene);
 
-      // Tunnel material
+      // Tunnel material with texture scaling
       const tunnelMat = new BABYLON.PBRMaterial("tunnelMat", scene);
       tunnelMat.albedoTexture = new BABYLON.Texture("assets/concrete.jpg", scene);
+      tunnelMat.albedoTexture.uScale = 10;  // repeat horizontally
+      tunnelMat.albedoTexture.vScale = 50;  // repeat along length
       tunnelMat.bumpTexture = new BABYLON.Texture("assets/concreteNormal.jpg", scene);
+      tunnelMat.bumpTexture.uScale = 10;
+      tunnelMat.bumpTexture.vScale = 50;
       tunnelMat.metallic = 0;
       tunnelMat.roughness = 0.9;
       tunnel.material = tunnelMat;
@@ -74,7 +78,11 @@
       // Rails
       const railMat = new BABYLON.PBRMaterial("railMat", scene);
       railMat.albedoTexture = new BABYLON.Texture("assets/metal.jpg", scene);
+      railMat.albedoTexture.uScale = 4;
+      railMat.albedoTexture.vScale = 50;
       railMat.bumpTexture = new BABYLON.Texture("assets/metalNormal.jpg", scene);
+      railMat.bumpTexture.uScale = 4;
+      railMat.bumpTexture.vScale = 50;
       railMat.metallic = 1;
       railMat.roughness = 0.2;
 
@@ -88,7 +96,11 @@
       // Pipes
       const pipeMat = new BABYLON.PBRMaterial("pipeMat", scene);
       pipeMat.albedoTexture = new BABYLON.Texture("assets/metal.jpg", scene);
+      pipeMat.albedoTexture.uScale = 2;
+      pipeMat.albedoTexture.vScale = 2;
       pipeMat.bumpTexture = new BABYLON.Texture("assets/metalNormal.jpg", scene);
+      pipeMat.bumpTexture.uScale = 2;
+      pipeMat.bumpTexture.vScale = 2;
       pipeMat.metallic = 1;
       pipeMat.roughness = 0.3;
 
