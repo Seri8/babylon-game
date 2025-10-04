@@ -1,81 +1,62 @@
 <!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Babylon.js Subway Tunnel</title>
-  <style>
-    html, body { width:100%; height:100%; margin:0; overflow:hidden; background:#000; }
-    #renderCanvas { width:100%; height:100%; display:block; }
-  </style>
-</head>
-<body>
-  <canvas id="renderCanvas"></canvas>
+const railRight = railLeft.clone("railR");
+railRight.position.x = 0.7;
 
-  <!-- Babylon.js -->
-  <script src="https://cdn.babylonjs.com/babylon.js"></script>
-  <script>
-    const canvas = document.getElementById("renderCanvas");
-    const engine = new BABYLON.Engine(canvas, true);
 
-    const createScene = function () {
-      const scene = new BABYLON.Scene(engine);
-      scene.clearColor = new BABYLON.Color4(0.05,0.05,0.05,1);
+const pipeMat = new BABYLON.PBRMaterial("pipeMat", scene);
+pipeMat.albedoTexture = new BABYLON.Texture("assets/metal.jpg", scene);
+pipeMat.bumpTexture = new BABYLON.Texture("assets/metalNormal.jpg", scene);
+pipeMat.metallic = 1;
+pipeMat.roughness = 0.3;
+for(let i=0;i<tunnelLength;i+=15){
+const pipe = BABYLON.MeshBuilder.CreateCylinder("pipe"+i,{diameter:0.15,height:2},scene);
+pipe.rotation.z = Math.PI/2;
+pipe.position = new BABYLON.Vector3(-2.5,0.5,i*2);
+pipe.material = pipeMat;
+}
 
-      // Camera
-      const camera = new BABYLON.FreeCamera("cam", new BABYLON.Vector3(0,1,-5), scene);
-      camera.attachControl(canvas, true);
-      camera.speed = 0.3;
 
-      // Ambient light
-      const ambient = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0,1,0), scene);
-      ambient.intensity = 0.2;
+scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
+scene.fogDensity = 0.01;
+scene.fogColor = new BABYLON.Color3(0.1,0.1,0.1);
 
-      // Tunnel path
-      const path = [];
-      for (let i=0;i<150;i++) {
-        path.push(new BABYLON.Vector3(0,0,i*2));
-      }
 
-      // Tube mesh (the tunnel)
-      const tunnel = BABYLON.MeshBuilder.CreateTube("tunnel", {
-        path: path,
-        radius: 3,
-        tessellation: 32,
-        sideOrientation: BABYLON.Mesh.BACKSIDE
-      }, scene);
+const particleSystem = new BABYLON.ParticleSystem("dust",1000,scene);
+particleSystem.particleTexture = new BABYLON.Texture("assets/flare.png",scene);
+particleSystem.emitter = new BABYLON.Vector3(0,1,0);
+particleSystem.minEmitBox = new BABYLON.Vector3(-3,0,0);
+particleSystem.maxEmitBox = new BABYLON.Vector3(3,2,tunnelLength*2);
+particleSystem.color1 = new BABYLON.Color4(1,1,1,0.05);
+particleSystem.color2 = new BABYLON.Color4(1,1,1,0.05);
+particleSystem.minSize = 0.01;
+particleSystem.maxSize = 0.03;
+particleSystem.minLifeTime = 2;
+particleSystem.maxLifeTime = 4;
+particleSystem.emitRate = 200;
+particleSystem.blendMode = BABYLON.ParticleSystem.BLENDMODE_STANDARD;
+particleSystem.direction1 = new BABYLON.Vector3(0,0,1);
+particleSystem.direction2 = new BABYLON.Vector3(0,0,1);
+particleSystem.gravity = new BABYLON.Vector3(0,0,0);
+particleSystem.start();
 
-      // Tunnel material (plain concrete-like gray)
-      const tunnelMat = new BABYLON.StandardMaterial("tunnelMat", scene);
-      tunnelMat.diffuseColor = new BABYLON.Color3(0.4,0.4,0.4);
-      tunnelMat.specularColor = new BABYLON.Color3(0.1,0.1,0.1);
-      tunnel.material = tunnelMat;
 
-      // Ceiling lights every 20 units
-      for (let i=0; i<150; i+=20) {
-        const lamp = new BABYLON.PointLight("lamp"+i, new BABYLON.Vector3(0,2,i*2), scene);
-        lamp.diffuse = new BABYLON.Color3(1,1,0.9);
-        lamp.intensity = 2.0;
+let u=0;
+scene.registerBeforeRender(()=>{
+u+=0.02;
+if(u>tunnelLength*2) u=0;
+camera.position.z = u;
+camera.position.y = 1;
+lights.forEach(lamp=>{ lamp.intensity = 1.8 + Math.random()*0.4; });
+});
 
-        // Bulb mesh
-        const bulb = BABYLON.MeshBuilder.CreateSphere("bulb"+i, {diameter:0.2}, scene);
-        bulb.position = new BABYLON.Vector3(0,2,i*2);
-        const bulbMat = new BABYLON.StandardMaterial("bulbMat", scene);
-        bulbMat.emissiveColor = new BABYLON.Color3(1,1,0.8);
-        bulb.material = bulbMat;
-      }
 
-      // Fog for depth
-      scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
-      scene.fogDensity = 0.01;
-      scene.fogColor = new BABYLON.Color3(0.1,0.1,0.1);
+return scene;
+};
 
-      return scene;
-    };
 
-    const scene = createScene();
-    engine.runRenderLoop(() => { scene.render(); });
-    window.addEventListener("resize", () => { engine.resize(); });
-  </script>
+const scene = createScene();
+engine.runRenderLoop(()=>scene.render());
+window.addEventListener("resize",()=>engine.resize());
+</script>
 </body>
 </html>
