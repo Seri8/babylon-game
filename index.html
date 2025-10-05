@@ -1,73 +1,74 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Cinematic Subway Tunnel</title>
-  <style>
-    html, body { width:100%; height:100%; margin:0; overflow:hidden; background:#000; }
-    #renderCanvas { width:100%; height:100%; display:block; }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Cinematic Subway Tunnel</title>
+<style>
+html, body { width:100%; height:100%; margin:0; overflow:hidden; background:#000; }
+#renderCanvas { width:100%; height:100%; display:block; }
+</style>
 </head>
 <body>
-  <canvas id="renderCanvas"></canvas>
+<canvas id="renderCanvas"></canvas>
 
-  <script src="https://cdn.babylonjs.com/babylon.js"></script>
-  <script>
-    const canvas = document.getElementById("renderCanvas");
-    const engine = new BABYLON.Engine(canvas, true);
+<script src="https://cdn.babylonjs.com/babylon.js"></script>
+<script>
+const canvas = document.getElementById("renderCanvas");
+const engine = new BABYLON.Engine(canvas, true);
 
-    const createScene = function () {
-      const scene = new BABYLON.Scene(engine);
-      scene.clearColor = new BABYLON.Color4(0,0,0,1);
+const createScene = () => {
+    const scene = new BABYLON.Scene(engine);
+    scene.clearColor = new BABYLON.Color4(0,0,0,1);
+    
+    // Camera
+    const camera = new BABYLON.FreeCamera("cam", new BABYLON.Vector3(0,1.5,0), scene);
+    camera.fov = 0.85;
 
-      // Camera
-      const camera = new BABYLON.FreeCamera("cam", new BABYLON.Vector3(0,1.5,0), scene);
-      camera.fov = 0.85;
+    // Light
+    new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0,1,0), scene);
 
-      // Light
-      new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0,1,0), scene);
-
-      // Tunnel path (meandering + hills)
-      const path = [];
-      const tunnelLength = 200;
-      for(let i=0;i<tunnelLength;i++){
+    // Tunnel path
+    const path = [];
+    const tunnelLength = 200;
+    for(let i=0;i<tunnelLength;i++){
         const x = Math.sin(i*0.12)*2 + Math.sin(i*0.05)*0.5;
         const y = Math.sin(i*0.07)*0.8 + Math.cos(i*0.03)*0.3;
         const z = i*2;
         path.push(new BABYLON.Vector3(x,y,z));
-      }
+    }
 
-      // Tunnel PBR material (realistic concrete)
-      const tunnelMat = new BABYLON.PBRMaterial("tunnelMat", scene);
-      tunnelMat.albedoColor = new BABYLON.Color3(0.3,0.3,0.35); // concrete base
-      tunnelMat.metallic = 0.1; // slight metallic for realism
-      tunnelMat.roughness = 0.8; // rough concrete
-      tunnelMat.reflectivityColor = new BABYLON.Color3(0.05,0.05,0.05);
+    // Tunnel material
+    const tunnelMat = new BABYLON.PBRMaterial("tunnelMat", scene);
+    tunnelMat.albedoTexture = new BABYLON.Texture("assets/concrete.jpg", scene);
+    tunnelMat.bumpTexture = new BABYLON.Texture("assets/concreteNormal.jpg", scene);
+    tunnelMat.metallic = 0;
+    tunnelMat.roughness = 0.8;
 
-      const tunnel = BABYLON.MeshBuilder.CreateTube("tunnel",{
-        path:path,
-        radius:3,
-        tessellation:64,
-        sideOrientation:BABYLON.Mesh.BACKSIDE
-      },scene);
-      tunnel.material = tunnelMat;
+    const tunnel = BABYLON.MeshBuilder.CreateTube("tunnel", {
+        path: path,
+        radius: 3,
+        tessellation: 64,
+        sideOrientation: BABYLON.Mesh.BACKSIDE
+    }, scene);
+    tunnel.material = tunnelMat;
 
-      // Rails (metallic)
-      const railMat = new BABYLON.PBRMaterial("railMat", scene);
-      railMat.albedoColor = new BABYLON.Color3(0.35,0.35,0.35);
-      railMat.metallic = 1;
-      railMat.roughness = 0.25;
-      const railLeft = BABYLON.MeshBuilder.CreateBox("railL",{width:0.1,height:0.05,depth:tunnelLength*2},scene);
-      railLeft.position = new BABYLON.Vector3(-0.5,-2.95,tunnelLength);
-      railLeft.material = railMat;
-      const railRight = railLeft.clone("railR");
-      railRight.position.x = 0.5;
+    // Rails
+    const railMat = new BABYLON.PBRMaterial("railMat", scene);
+    railMat.albedoTexture = new BABYLON.Texture("assets/metal.jpg", scene);
+    railMat.bumpTexture = new BABYLON.Texture("assets/metalNormal.jpg", scene);
+    railMat.metallic = 1;
+    railMat.roughness = 0.25;
+    const railLeft = BABYLON.MeshBuilder.CreateBox("railL",{width:0.1,height:0.05,depth:tunnelLength*2},scene);
+    railLeft.position = new BABYLON.Vector3(-0.5,-2.95,tunnelLength);
+    railLeft.material = railMat;
+    const railRight = railLeft.clone("railR");
+    railRight.position.x = 0.5;
 
-      // Ceiling lights
-      const lightMat = new BABYLON.StandardMaterial("lightMat", scene);
-      lightMat.emissiveColor = new BABYLON.Color3(1,1,0.85);
-      for(let i=0;i<tunnelLength;i+=15){
+    // Ceiling lights
+    const lightMat = new BABYLON.StandardMaterial("lightMat", scene);
+    lightMat.emissiveColor = new BABYLON.Color3(1,1,0.85);
+    for(let i=0;i<tunnelLength;i+=15){
         const pos = path[i];
         const bulb = BABYLON.MeshBuilder.CreateSphere("bulb"+i,{diameter:0.2},scene);
         bulb.position = new BABYLON.Vector3(pos.x,2.5,pos.z);
@@ -75,16 +76,29 @@
         const light = new BABYLON.PointLight("lamp"+i,bulb.position,scene);
         light.intensity = 1.5;
         light.diffuse = new BABYLON.Color3(1,0.95,0.8);
-      }
+    }
 
-      // Fog
-      scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
-      scene.fogDensity = 0.006;
-      scene.fogColor = new BABYLON.Color3(0.02,0.02,0.02);
+    // Fog
+    scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
+    scene.fogDensity = 0.006;
+    scene.fogColor = new BABYLON.Color3(0.02,0.02,0.02);
 
-      // Subway ride animation
-      let u=0;
-      scene.registerBeforeRender(()=>{
+    // Dust particles
+    const particleSystem = new BABYLON.ParticleSystem("dust",2000,scene);
+    particleSystem.particleTexture = new BABYLON.Texture("assets/flare.png",scene);
+    particleSystem.emitter = new BABYLON.Vector3(0,1,0);
+    particleSystem.minEmitBox = new BABYLON.Vector3(-3,0,0);
+    particleSystem.maxEmitBox = new BABYLON.Vector3(3,2,tunnelLength*2);
+    particleSystem.color1 = new BABYLON.Color4(1,1,1,0.05);
+    particleSystem.color2 = new BABYLON.Color4(1,1,1,0.05);
+    particleSystem.minSize = 0.01;
+    particleSystem.maxSize = 0.03;
+    particleSystem.emitRate = 200;
+    particleSystem.start();
+
+    // Subway ride animation
+    let u=0;
+    scene.registerBeforeRender(()=>{
         u+=0.5;
         if(u>tunnelLength*2) u=0;
         const idx = Math.floor(u/2)%path.length;
@@ -93,18 +107,18 @@
         const bank = Math.sin(u*0.1)*0.06;
         camera.position.set(pos.x+bank,1.5+bob,pos.z);
         if(idx<path.length-1){
-          const next = path[idx+1];
-          const forward = next.subtract(pos).normalize();
-          camera.rotation.y = Math.atan2(forward.x,forward.z)+bank;
+            const next = path[idx+1];
+            const forward = next.subtract(pos).normalize();
+            camera.rotation.y = Math.atan2(forward.x,forward.z)+bank;
         }
-      });
+    });
 
-      return scene;
-    };
+    return scene;
+};
 
-    const scene = createScene();
-    engine.runRenderLoop(()=>scene.render());
-    window.addEventListener("resize",()=>engine.resize());
-  </script>
+const scene = createScene();
+engine.runRenderLoop(()=>scene.render());
+window.addEventListener("resize",()=>engine.resize());
+</script>
 </body>
 </html>
