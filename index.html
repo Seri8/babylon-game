@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Colorful Wireframe Tunnel</title>
+  <title>Colorful Wireframe Holographic Tunnel</title>
   <style>
     html, body { width:100%; height:100%; margin:0; overflow:hidden; background:#000; }
     #renderCanvas { width:100%; height:100%; display:block; }
@@ -15,8 +15,8 @@
   <script src="https://cdn.babylonjs.com/babylon.js"></script>
   <script>
     const canvas = document.getElementById("renderCanvas");
-    const engine = new BABYLON.Engine(canvas, true);
-    engine.setHardwareScalingLevel(2); // smoother performance
+    const engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
+    engine.setHardwareScalingLevel(1.5);
 
     const createScene = function () {
       const scene = new BABYLON.Scene(engine);
@@ -26,7 +26,7 @@
       const camera = new BABYLON.FreeCamera("cam", new BABYLON.Vector3(0,1.5,0), scene);
       camera.fov = 0.85;
 
-      // Ambient light
+      // Lighting
       new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0,1,0), scene);
 
       // Tunnel path
@@ -39,7 +39,7 @@
         path.push(new BABYLON.Vector3(x,y,z));
       }
 
-      // Color-changing wireframe material
+      // Wireframe colorful tunnel
       const tunnelMat = new BABYLON.StandardMaterial("tunnelMat", scene);
       tunnelMat.diffuseColor = new BABYLON.Color3(0.3,0.3,0.3);
       tunnelMat.emissiveColor = new BABYLON.Color3(0.4,0.2,0.8);
@@ -54,24 +54,25 @@
       }, scene);
       tunnel.material = tunnelMat;
 
-      // Emissive wireframe bulbs
-      const bulbMat = new BABYLON.StandardMaterial("bulbMat", scene);
-      bulbMat.emissiveColor = new BABYLON.Color3(1, 0.9, 0.7);
-      bulbMat.wireframe = true;
+      // Glowing grid floor
+      const gridMat = new BABYLON.StandardMaterial("gridMat", scene);
+      gridMat.emissiveColor = new BABYLON.Color3(0.2, 0.8, 1);
+      gridMat.wireframe = true;
+      const floor = BABYLON.MeshBuilder.CreateGround("floor", { width: 20, height: 1000, subdivisions: 100 }, scene);
+      floor.position.y = -3;
+      floor.material = gridMat;
 
-      for (let i = 0; i < tunnelLength; i += 20) {
-        const p = path[i];
-        const bulb = BABYLON.MeshBuilder.CreateSphere("bulb" + i, { diameter: 0.3 }, scene);
-        bulb.position = new BABYLON.Vector3(p.x, 2.2, p.z);
-        bulb.material = bulbMat;
-      }
+      // Holographic overlay (moving wireframe walls)
+      const holoMat = new BABYLON.StandardMaterial("holoMat", scene);
+      holoMat.emissiveColor = new BABYLON.Color3(0.6, 0.9, 1);
+      holoMat.alpha = 0.15;
+      holoMat.wireframe = true;
 
-      // Wireframe particles (still faint fog)
-      const particleMat = new BABYLON.StandardMaterial("particleMat", scene);
-      particleMat.emissiveColor = new BABYLON.Color3(1, 1, 1);
-      particleMat.wireframe = true;
+      const holoBox = BABYLON.MeshBuilder.CreateBox("holoBox", { width: 8, height: 6, depth: 8 }, scene);
+      holoBox.material = holoMat;
+      holoBox.position = new BABYLON.Vector3(0, 0, 5);
 
-      // Fog (soft depth fade)
+      // Fog (soft depth)
       scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
       scene.fogDensity = 0.006;
       scene.fogColor = new BABYLON.Color3(0.03,0.03,0.03);
@@ -86,10 +87,16 @@
         const pos = path[idx];
         camera.position.set(pos.x, 1.5, pos.z);
 
-        // Animate emissive color hue
-        hue = (hue + 0.6) % 360;
+        // Rotate holographic cube
+        holoBox.position.z = pos.z + 8;
+        holoBox.rotation.y += 0.01;
+        holoBox.rotation.x += 0.005;
+
+        // Color cycle for tunnel + grid
+        hue = (hue + 0.8) % 360;
         const c = BABYLON.Color3.FromHSV(hue / 360, 1, 0.9);
         tunnelMat.emissiveColor.copyFrom(c);
+        gridMat.emissiveColor.copyFrom(BABYLON.Color3.FromHSV((hue+180)/360, 0.8, 0.9));
       });
 
       return scene;
