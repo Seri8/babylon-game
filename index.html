@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Colorful Holographic Tunnel</title>
+  <title>Subway Ride Tunnel</title>
   <style>
     html, body { width:100%; height:100%; margin:0; overflow:hidden; background:#000; }
     #renderCanvas { width:100%; height:100%; display:block; }
@@ -27,10 +27,9 @@
       camera.fov = 0.85;
 
       // Lighting
-      const hemi = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0,1,0), scene);
-      hemi.intensity = 0.7;
+      new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0,1,0), scene);
 
-      // Tunnel path (meandering)
+      // Tunnel path
       const path = [];
       const tunnelLength = 150;
       for (let i = 0; i < tunnelLength; i++) {
@@ -55,15 +54,6 @@
       }, scene);
       solidTunnel.material = solidMat;
 
-      // Wireframe overlay
-      const wireMat = new BABYLON.StandardMaterial("wireMat", scene);
-      wireMat.emissiveColor = new BABYLON.Color3(0.3, 0.9, 1);
-      wireMat.wireframe = true;
-      wireMat.alpha = 0.6;
-
-      const wireTunnel = solidTunnel.clone("wireTunnel");
-      wireTunnel.material = wireMat;
-
       // Grid floor
       const gridMat = new BABYLON.StandardMaterial("gridMat", scene);
       gridMat.emissiveColor = new BABYLON.Color3(0.2, 0.8, 1);
@@ -75,36 +65,34 @@
       // Fog
       scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
       scene.fogDensity = 0.006;
-      scene.fogColor = new BABYLON.Color3(0.02, 0.02, 0.02);
+      scene.fogColor = new BABYLON.Color3(0.02,0.02,0.02);
 
-      // Holographic overlay cube
-      const holoMat = new BABYLON.StandardMaterial("holoMat", scene);
-      holoMat.emissiveColor = new BABYLON.Color3(0.6, 0.9, 1);
-      holoMat.alpha = 0.1;
-      holoMat.wireframe = true;
-      const holoBox = BABYLON.MeshBuilder.CreateBox("holoBox", { width: 8, height: 6, depth: 8 }, scene);
-      holoBox.material = holoMat;
-
-      // Animation
+      // Camera subway ride animation
       let u = 0;
       let hue = 0;
       scene.registerBeforeRender(() => {
-        u += 0.25;
+        u += 0.4; // forward speed
         if (u > tunnelLength * 2) u = 0;
         const idx = Math.floor(u / 2) % path.length;
         const pos = path[idx];
-        camera.position.set(pos.x, 1.5, pos.z);
+
+        // Smooth vertical bobbing (like train on rails)
+        const bob = Math.sin(u * 0.2) * 0.1;
+        const bank = Math.sin(u * 0.1) * 0.05; // slight side tilt
+
+        camera.position.set(pos.x + bank, 1.5 + bob, pos.z);
+
+        // Slight rotation along curve
+        if (idx < path.length - 1) {
+          const next = path[idx + 1];
+          const forward = next.subtract(pos).normalize();
+          camera.rotation.y = Math.atan2(forward.x, forward.z) + bank;
+        }
 
         // Color cycling
         hue = (hue + 0.8) % 360;
-        const c = BABYLON.Color3.FromHSV(hue / 360, 1, 0.9);
-        wireMat.emissiveColor.copyFrom(c);
-        gridMat.emissiveColor.copyFrom(BABYLON.Color3.FromHSV((hue + 180) / 360, 0.8, 0.9));
-
-        // Rotate holographic box
-        holoBox.position.z = pos.z + 8;
-        holoBox.rotation.y += 0.01;
-        holoBox.rotation.x += 0.005;
+        solidMat.emissiveColor = BABYLON.Color3.FromHSV(hue / 360, 1, 0.9);
+        gridMat.emissiveColor = BABYLON.Color3.FromHSV((hue + 180) / 360, 0.8, 0.9);
       });
 
       return scene;
