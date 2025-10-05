@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Realistic Subway Tunnel Ride</title>
+  <title>Cinematic Subway Tunnel Ride</title>
   <style>
     html, body { width:100%; height:100%; margin:0; overflow:hidden; background:#000; }
     #renderCanvas { width:100%; height:100%; display:block; }
@@ -39,11 +39,11 @@
         path.push(new BABYLON.Vector3(x, y, z));
       }
 
-      // Realistic concrete tunnel material
+      // Realistic concrete tunnel material with subtle bright patches
       const tunnelMat = new BABYLON.StandardMaterial("tunnelMat", scene);
-      tunnelMat.diffuseColor = new BABYLON.Color3(0.4, 0.4, 0.4); // concrete gray
-      tunnelMat.specularColor = new BABYLON.Color3(0.1, 0.1, 0.1); // low specular
-      tunnelMat.emissiveColor = new BABYLON.Color3(0.05, 0.05, 0.05); // subtle glow
+      tunnelMat.diffuseColor = new BABYLON.Color3(0.38, 0.38, 0.38);
+      tunnelMat.specularColor = new BABYLON.Color3(0.1, 0.1, 0.1);
+      tunnelMat.emissiveColor = new BABYLON.Color3(0.05, 0.05, 0.05);
       tunnelMat.alpha = 1;
 
       const tunnel = BABYLON.MeshBuilder.CreateTube("tunnel", {
@@ -58,66 +58,4 @@
       const gridMat = new BABYLON.StandardMaterial("gridMat", scene);
       gridMat.emissiveColor = new BABYLON.Color3(0.2, 0.8, 1);
       gridMat.wireframe = true;
-      const floor = BABYLON.MeshBuilder.CreateGround("floor", { width: 6, height: 1000, subdivisions: 100 }, scene);
-      floor.position.y = -3;
-      floor.material = gridMat;
-
-      // Rails
-      const railMat = new BABYLON.StandardMaterial("railMat", scene);
-      railMat.diffuseColor = new BABYLON.Color3(0.3, 0.3, 0.3);
-      railMat.specularColor = new BABYLON.Color3(0.8,0.8,0.8);
-      const railLeft = BABYLON.MeshBuilder.CreateBox("railL", {width:0.1, height:0.05, depth:tunnelLength*2}, scene);
-      railLeft.position = new BABYLON.Vector3(-0.5, -2.95, tunnelLength);
-      railLeft.material = railMat;
-      const railRight = railLeft.clone("railR");
-      railRight.position.x = 0.5;
-
-      // Ceiling lights
-      const lightMat = new BABYLON.StandardMaterial("lightMat", scene);
-      lightMat.emissiveColor = new BABYLON.Color3(1, 1, 0.85);
-      for (let i = 0; i < tunnelLength; i += 15) {
-        const pos = path[i];
-        const lightSphere = BABYLON.MeshBuilder.CreateSphere("light"+i, {diameter:0.2}, scene);
-        lightSphere.position = new BABYLON.Vector3(pos.x, 2.5, pos.z);
-        lightSphere.material = lightMat;
-
-        const light = new BABYLON.PointLight("lamp"+i, lightSphere.position, scene);
-        light.intensity = 1.5;
-        light.diffuse = new BABYLON.Color3(1, 0.95, 0.8);
-      }
-
-      // Fog
-      scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
-      scene.fogDensity = 0.006;
-      scene.fogColor = new BABYLON.Color3(0.02,0.02,0.02);
-
-      // Subway camera ride animation
-      let u = 0;
-      scene.registerBeforeRender(() => {
-        u += 0.4; // speed
-        if (u > tunnelLength * 2) u = 0;
-        const idx = Math.floor(u / 2) % path.length;
-        const pos = path[idx];
-
-        // Bobbing and banking
-        const bob = Math.sin(u * 0.2) * 0.1;
-        const bank = Math.sin(u * 0.1) * 0.05;
-        camera.position.set(pos.x + bank, 1.5 + bob, pos.z);
-
-        // Rotation along curve
-        if (idx < path.length - 1) {
-          const next = path[idx + 1];
-          const forward = next.subtract(pos).normalize();
-          camera.rotation.y = Math.atan2(forward.x, forward.z) + bank;
-        }
-      });
-
-      return scene;
-    };
-
-    const scene = createScene();
-    engine.runRenderLoop(() => scene.render());
-    window.addEventListener("resize", () => engine.resize());
-  </script>
-</body>
-</html>
+      const floor = BABYLON.MeshBuilder.CreateGround("floor", { width
