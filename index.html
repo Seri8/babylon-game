@@ -13,104 +13,82 @@
   <canvas id="renderCanvas"></canvas>
 
   <script src="https://cdn.babylonjs.com/babylon.js"></script>
-  <script src="https://cdn.babylonjs.com/postProcessesLibrary/babylonjs.postProcess.min.js"></script>
-
   <script>
     const canvas = document.getElementById("renderCanvas");
     const engine = new BABYLON.Engine(canvas, true);
-    engine.setHardwareScalingLevel(window.devicePixelRatio > 1 ? 1.5 : 1); // auto-scale for perf
+    engine.setHardwareScalingLevel(2); // render at lower resolution for speed
 
     const createScene = function () {
       const scene = new BABYLON.Scene(engine);
-      scene.clearColor = new BABYLON.Color4(0.01,0.01,0.01,1);
+      scene.clearColor = new BABYLON.Color4(0.02,0.02,0.02,1);
 
       // Camera
       const camera = new BABYLON.FreeCamera("cam", new BABYLON.Vector3(0,1.5,0), scene);
       camera.fov = 0.85;
 
-      // Ambient light
+      // Ambient light only (very cheap)
       const ambient = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0,1,0), scene);
-      ambient.intensity = 0.25;
+      ambient.intensity = 0.3;
 
-      // Tunnel path (meandering)
+      // Shorter tunnel & simpler geometry
       const path = [];
-      const tunnelLength = 200;
+      const tunnelLength = 150; // smaller for performance
       for (let i=0; i<tunnelLength; i++) {
-        const x = Math.sin(i*0.1) * 2;
-        const y = Math.cos(i*0.05) * 0.5;
+        const x = Math.sin(i*0.1) * 1.5;
+        const y = Math.cos(i*0.05) * 0.3;
         const z = i * 2;
         path.push(new BABYLON.Vector3(x, y, z));
       }
 
-      // Tunnel geometry (lower tessellation for performance)
       const tunnel = BABYLON.MeshBuilder.CreateTube("tunnel", {
         path: path,
         radius: 3,
-        tessellation: 32,
+        tessellation: 16,  // fewer polygons
         sideOrientation: BABYLON.Mesh.BACKSIDE
       }, scene);
 
-      // Simple gray material
       const tunnelMat = new BABYLON.StandardMaterial("tunnelMat", scene);
-      tunnelMat.diffuseColor = new BABYLON.Color3(0.3,0.3,0.3);
+      tunnelMat.diffuseColor = new BABYLON.Color3(0.25,0.25,0.25);
       tunnelMat.specularColor = new BABYLON.Color3(0,0,0);
       tunnel.material = tunnelMat;
 
-      // Fewer ceiling lights (use emissive bulbs mostly)
-      const lights = [];
-      for (let i=0; i<tunnelLength; i+=25) {
-        const lampPos = path[i];
-        const lamp = new BABYLON.PointLight("lamp"+i, new BABYLON.Vector3(lampPos.x,2.2,lampPos.z), scene);
-        lamp.diffuse = new BABYLON.Color3(1,0.95,0.85);
-        lamp.intensity = 1.6;
-        lights.push(lamp);
-
-        // emissive bulb (cheap)
-        const bulb = BABYLON.MeshBuilder.CreateSphere("bulb"+i,{diameter:0.25},scene);
-        bulb.position = new BABYLON.Vector3(lampPos.x,2.2,lampPos.z);
-        const bulbMat = new BABYLON.StandardMaterial("bulbMat",scene);
-        bulbMat.emissiveColor = new BABYLON.Color3(1,0.95,0.8);
+      // Emissive ceiling bulbs (no point lights)
+      const bulbMat = new BABYLON.StandardMaterial("bulbMat", scene);
+      bulbMat.emissiveColor = new BABYLON.Color3(1, 0.9, 0.7);
+      for (let i=0; i<tunnelLength; i+=20) {
+        const bulb = BABYLON.MeshBuilder.CreateSphere("bulb"+i,{diameter:0.3},scene);
+        const pos = path[i];
+        bulb.position = new BABYLON.Vector3(pos.x, 2.2, pos.z);
         bulb.material = bulbMat;
       }
 
-      // Fog
+      // Subtle fog
       scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
-      scene.fogDensity = 0.008;
+      scene.fogDensity = 0.006;
       scene.fogColor = new BABYLON.Color3(0.05,0.05,0.05);
 
-      // Dust particles (fewer particles)
-      const particleSystem = new BABYLON.ParticleSystem("dust",800,scene);
+      // Very light dust particles
+      const particleSystem = new BABYLON.ParticleSystem("dust", 400, scene);
       particleSystem.particleTexture = new BABYLON.Texture("https://playground.babylonjs.com/textures/flare.png",scene);
       particleSystem.emitter = new BABYLON.Vector3(0,1,0);
       particleSystem.minEmitBox = new BABYLON.Vector3(-3,0,0);
       particleSystem.maxEmitBox = new BABYLON.Vector3(3,2,tunnelLength*2);
-      particleSystem.color1 = new BABYLON.Color4(1,1,1,0.05);
-      particleSystem.color2 = new BABYLON.Color4(1,1,1,0.05);
+      particleSystem.color1 = new BABYLON.Color4(1,1,1,0.04);
+      particleSystem.color2 = new BABYLON.Color4(1,1,1,0.04);
       particleSystem.minSize = 0.01;
-      particleSystem.maxSize = 0.03;
-      particleSystem.emitRate = 200;
+      particleSystem.maxSize = 0.02;
+      particleSystem.emitRate = 100;
       particleSystem.start();
-
-      // Light post-processing only
-      const pipeline = new BABYLON.DefaultRenderingPipeline("default", true, scene, [camera]);
-      pipeline.bloomEnabled = true;
-      pipeline.bloomIntensity = 0.4;
-      pipeline.bloomThreshold = 0.7;
 
       // Camera animation
       let u=0;
       scene.registerBeforeRender(()=>{
-        u+=0.18; // faster
-        if(u>tunnelLength*2) u=0;
+        u += 0.25;
+        if (u > tunnelLength * 2) u = 0;
 
-        const idx = Math.floor(u/2) % path.length;
+        const idx = Math.floor(u / 2) % path.length;
         const pos = path[idx];
         camera.position.set(pos.x, 1.5, pos.z);
-
-        // small light flicker
-        lights.forEach(lamp=>{
-          lamp.intensity = 1.5 + Math.random()*0.2;
-        });
       });
 
       return scene;
