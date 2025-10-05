@@ -39,20 +39,20 @@
         path.push(new BABYLON.Vector3(x, y, z));
       }
 
-      // Solid tunnel
-      const solidMat = new BABYLON.StandardMaterial("solidMat", scene);
-      solidMat.diffuseColor = new BABYLON.Color3(0.1, 0.1, 0.12);
-      solidMat.specularColor = new BABYLON.Color3(0.1, 0.1, 0.1);
-      solidMat.emissiveColor = new BABYLON.Color3(0.15, 0.2, 0.25);
-      solidMat.alpha = 0.95;
+      // Realistic concrete tunnel material
+      const tunnelMat = new BABYLON.StandardMaterial("tunnelMat", scene);
+      tunnelMat.diffuseColor = new BABYLON.Color3(0.4, 0.4, 0.4); // concrete gray
+      tunnelMat.specularColor = new BABYLON.Color3(0.1, 0.1, 0.1); // low specular
+      tunnelMat.emissiveColor = new BABYLON.Color3(0.05, 0.05, 0.05); // subtle glow
+      tunnelMat.alpha = 1;
 
-      const solidTunnel = BABYLON.MeshBuilder.CreateTube("solidTunnel", {
+      const tunnel = BABYLON.MeshBuilder.CreateTube("tunnel", {
         path: path,
         radius: 3,
         tessellation: 64,
         sideOrientation: BABYLON.Mesh.BACKSIDE
       }, scene);
-      solidTunnel.material = solidMat;
+      tunnel.material = tunnelMat;
 
       // Grid floor
       const gridMat = new BABYLON.StandardMaterial("gridMat", scene);
@@ -91,11 +91,10 @@
       scene.fogDensity = 0.006;
       scene.fogColor = new BABYLON.Color3(0.02,0.02,0.02);
 
-      // Camera subway ride animation
+      // Subway camera ride animation
       let u = 0;
-      let hue = 0;
       scene.registerBeforeRender(() => {
-        u += 0.4; // forward speed
+        u += 0.4; // speed
         if (u > tunnelLength * 2) u = 0;
         const idx = Math.floor(u / 2) % path.length;
         const pos = path[idx];
@@ -111,11 +110,6 @@
           const forward = next.subtract(pos).normalize();
           camera.rotation.y = Math.atan2(forward.x, forward.z) + bank;
         }
-
-        // Color cycling for tunnel and grid
-        hue = (hue + 0.8) % 360;
-        solidMat.emissiveColor = BABYLON.Color3.FromHSV(hue / 360, 1, 0.9);
-        gridMat.emissiveColor = BABYLON.Color3.FromHSV((hue + 180) / 360, 0.8, 0.9);
       });
 
       return scene;
